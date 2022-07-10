@@ -1,3 +1,3 @@
 # Useful pieces of information
 
-* [Using pip with SSH when building a Docker image](pip_install_ssh_docker.md)
+* [Using pip when building a Docker image in GitLab CI](pip_install_ssh_docker.md)
