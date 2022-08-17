@@ -1,3 +1,4 @@
 # Useful things
 
-* [Using pip when building a Docker image in GitLab CI](pip_install_ssh_docker.md)
+* [Using pip and private repos when building a Docker image](pip_install_ssh_docker.md)
+* [Create a Git hook to check a commit message starts with a JIRA ticket identifier](git_hook_check_message.md)
