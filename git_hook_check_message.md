@@ -15,7 +15,7 @@ import sys
 with open(sys.argv[1]) as tempfile:
     msg = tempfile.read()
 
-if not re.match(r"[A-Z][A-Z]-\d{4}:\s", msg):
+if not re.match(r"[A-Z][A-Z]-\d{4}:\s", msg.lstrip("fixup! ")):
     sys.stdout.write("\033[1;31m")  # Red
     sys.stdout.write("Commit message does not start with JIRA ticket number\n")
     sys.stdout.write("\033[0;0m")   # Reset
@@ -26,7 +26,7 @@ sys.exit(0)
 
 The script is able to access the commit message by opening a file that Git has passed as the first argument.
 
-As well as validating that the message starts with the ticket number, the script also checks for the presence of a colon and a space between the ticket number and the message. 
+As well as validating that the message starts with the ticket number, the script also checks for the presence of a colon and a space between the ticket number and the message. It will also ignore any `fixup!` prefix.
 
 Save the above script to a file called `commit-msg` in your `<project>/.git/hooks` for it to take effect for just that project.
 
