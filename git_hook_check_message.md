@@ -13,9 +13,12 @@ import re
 import sys
 
 with open(sys.argv[1]) as tempfile:
-    msg = tempfile.read()
+	msg = tempfile.read()
+    
+if msg.startswith("fixup! "):
+    msg = msg[7:]
 
-if not re.match(r"[A-Z][A-Z]-\d{4}:\s", msg.lstrip("fixup! ")):
+if not re.match(r"[A-Z][A-Z]-\d{4}:\s", msg):
     sys.stdout.write("\033[1;31m")  # Red
     sys.stdout.write("Commit message does not start with JIRA ticket number\n")
     sys.stdout.write("\033[0;0m")   # Reset
