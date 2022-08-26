@@ -20,7 +20,7 @@ fatal: Could not read from remote repository.
 Please make sure you have the correct access rights
 and the repository exists.
 ```
-The issue is that the Docker image doesn't have access to the SSH private key for the repository, so pip can't download the module.
+The issue is that the Docker image doesn't have access to your SSH private key for the repository, so pip can't download the module.
 
 **Don't try and copy your SSH private key into the Docker image.** This could potentially expose the key to third parties if the image ever gets distributed. Instead, use Docker's SSH pass through functionality to only expose the private key to the build process.
 
