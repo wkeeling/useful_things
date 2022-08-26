@@ -1,6 +1,6 @@
-# Installing from a private repo using pip, Docker and GitLab CI
+# Installing from a private Git repo using pip, Docker and GitLab CI
 
-You're trying to build a Docker image that uses a Python module from a private repository, e.g. you have something like this in your `requirements.txt`:
+You're trying to build a Docker image that uses a Python module from a private Git repository, e.g. you have something like this in your `requirements.txt`:
 
 ```shell
 git+ssh://git@private.server.com/repository/my_module@main
