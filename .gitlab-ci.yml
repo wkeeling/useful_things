@@ -1,0 +1,294 @@
+default:
+  tags: [ linux, docker ]
+
+stages:
+  - build
+  - check
+  - test
+
+variables:
+  PYTHONPATH: ".:./api"
+
+# Base definitions
+# ----------------------------------------------
+
+.build:
+  stage: build
+  variables:
+    DOCKER_NAME: "$CI_REGISTRY_IMAGE/my_application"
+  tags:
+    - docker
+  script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+    - echo $CI_REGISTRY_USER $CI_REGISTRY $CI_REGISTRY_IMAGE
+    - echo Building and pushing $DOCKER_TAG
+    - docker build
+      --no-cache
+      --pull
+      -t $DOCKER_TAG
+      .
+      -f docker/Dockerfile
+    - docker push $DOCKER_TAG
+    - echo $DOCKER_TAG complete...
+
+.flake8:
+  stage: check
+  allow_failure: true
+  variables:
+    DOCKER_NAME: "$CI_REGISTRY_IMAGE/my_application"
+  script:
+    - mkdir -p public/flake8
+    - flake8 --format junit-xml . > public/flake8/flake8.xml || flake8 .
+  image:
+    name: $DOCKER_TAG
+    entrypoint: [""]
+  artifacts:
+    reports:
+      junit:
+        - public/flake8/flake8.xml
+    paths:
+      - public/flake8/
+
+.black:
+  stage: check
+  variables:
+    DOCKER_NAME: "$CI_REGISTRY_IMAGE/my_application"
+  allow_failure: true
+  image:
+    name: $DOCKER_TAG
+    entrypoint: [""]
+  script:
+    - black --check .
+
+.pylint:
+  stage: check
+  allow_failure: true
+  image:
+    name: $DOCKER_TAG
+    entrypoint: [""]
+  variables:
+    PYTHONPATH: "api/:."
+    DOCKER_NAME: "$CI_REGISTRY_IMAGE/my_application"
+  script:
+    - mkdir -p public/pylint
+    - pylint --exit-zero --rcfile=.pylintrc --load-plugins=pylint_junit --output-format=junit --output=public/pylint/pylint.xml .
+    - pylint --exit-zero --rcfile=.pylintrc --output-format=text . | tee /tmp/pylint.txt
+    - sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' /tmp/pylint.txt > public/pylint/pylint.score
+  artifacts:
+    expose_as: "PyLint Report"
+    paths:
+      - public/pylint/
+
+.mypy:
+  stage: check
+  variables:
+    DOCKER_NAME: "$CI_REGISTRY_IMAGE/my_application"
+  allow_failure: false
+  image:
+    name: $DOCKER_TAG
+    entrypoint: [""]
+  script:
+    - pip freeze | sort
+    - mypy api
+
+.test:
+  stage: test
+  image:
+    name: $DOCKER_TAG
+    entrypoint: [""]
+  variables:
+    PYTHONPATH: "."
+    DOCKER_NAME: "$CI_REGISTRY_IMAGE/my_application"
+  script:
+    - echo "Running tests and generating coverage figures..."
+    - pytest --junit-xml=public/pytest/pytest.xml --cov=api --cov-report term --cov-report html:htmlcov --cov-report xml:cov.xml tests/
+  artifacts:
+    expose_as: "Coverage Reports"
+    paths:
+      - "htmlcov/"
+    reports:
+      cobertura: coverage.xml
+      junit: public/pytest/pytest.xml
+
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+
+# Build
+# ----------------------------------------------
+
+build_qa:
+  extends:
+    - .build
+  variables:
+    DOCKER_TAG: "$DOCKER_NAME:qa"
+  only:
+    - main
+  except:
+    - tags
+
+build_dev:
+  extends:
+    - .build
+  variables:
+    DOCKER_TAG: "$DOCKER_NAME:commit_$CI_COMMIT_SHORT_SHA"
+  except:
+    - main
+    - tags
+
+build_prod:
+  extends:
+    - .build
+  variables:
+    DOCKER_TAG: "$DOCKER_NAME:$CI_COMMIT_TAG"
+  only:
+    - tags
+  except:
+    - branches
+
+# Check
+# ----------------------------------------------
+
+# Flake8
+
+flake8_dev:
+  extends:
+    - .flake8
+  variables:
+    DOCKER_TAG: "$DOCKER_NAME:commit_$CI_COMMIT_SHORT_SHA"
+  except:
+    - main
+    - tags
+
+flake8_qa:
+  extends:
+    - .flake8
+  variables:
+    DOCKER_TAG: "$DOCKER_NAME:qa"
+  only:
+    - main
+
+flake8_prod:
+  extends:
+    - .flake8
+  variables:
+    DOCKER_TAG: "$DOCKER_NAME:$CI_COMMIT_TAG"
+  only:
+    - tags
+  except:
+    - branches
+
+# Black
+
+black_dev:
+  extends:
+    - .black
+  variables:
+    DOCKER_TAG: "$DOCKER_NAME:commit_$CI_COMMIT_SHORT_SHA"
+  except:
+    - main
+    - tags
+
+black_qa:
+  extends:
+    - .black
+  variables:
+    DOCKER_TAG: "$DOCKER_NAME:qa"
+  only:
+    - main
+
+black_prod:
+  extends:
+    - .black
+  variables:
+    DOCKER_TAG: "$DOCKER_NAME:$CI_COMMIT_TAG"
+  only:
+    - tags
+  except:
+    - branches
+
+# PyLint
+
+pylint_dev:
+  extends:
+    - .pylint
+  variables:
+    DOCKER_TAG: "$DOCKER_NAME:commit_$CI_COMMIT_SHORT_SHA"
+  except:
+    - main
+    - tags
+
+pylint_qa:
+  extends:
+    - .pylint
+  variables:
+    DOCKER_TAG: "$DOCKER_NAME:qa"
+  only:
+    - main
+
+pylint_prod:
+  extends:
+    - .pylint
+  variables:
+    DOCKER_TAG: "$DOCKER_NAME:$CI_COMMIT_TAG"
+  only:
+    - tags
+  except:
+    - branches
+
+# mypy
+
+mypy_dev:
+  extends:
+    - .mypy
+  variables:
+    DOCKER_TAG: "$DOCKER_NAME:commit_$CI_COMMIT_SHORT_SHA"
+  except:
+    - main
+    - tags
+
+mypy_qa:
+  extends:
+    - .mypy
+  variables:
+    DOCKER_TAG: "$DOCKER_NAME:qa"
+  only:
+    - main
+
+mypy_prod:
+  extends:
+    - .mypy
+  variables:
+    DOCKER_TAG: "$DOCKER_NAME:$CI_COMMIT_TAG"
+  only:
+    - tags
+  except:
+    - branches
+
+# Test
+# ----------------------------------------------
+
+test_dev:
+  extends:
+    - .test
+  variables:
+    DOCKER_TAG: "$DOCKER_NAME:commit_$CI_COMMIT_SHORT_SHA"
+  except:
+    - main
+    - tags
+
+test_qa:
+  extends:
+    - .test
+  variables:
+    DOCKER_TAG: "$DOCKER_NAME:qa"
+  only:
+    - main
+
+test_prod:
+  extends:
+    - .test
+  variables:
+    DOCKER_TAG: "$DOCKER_NAME:$CI_COMMIT_TAG"
+  only:
+    - tags
+  except:
+    - branches
