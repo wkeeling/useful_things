@@ -1,0 +1,11 @@
+[user]
+        name = Will Keeling
+        email = william_keeling@somewhere.com
+[log]
+        abbrevCommit = true
+[core]
+#       hooksPath = D:/Development/Hooks
+        autocrlf = false
+        safecrlf = false
+[http]
+        sslVerify = true
